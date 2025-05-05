@@ -53,3 +53,8 @@
 
 ## ライセンス
 MIT License
+
+## 免責事項
+私のパソコンで作成され、テストされたものです。どんな災難にも責任は負いません！  
+<p align="center"> <a href="https://giphy.com/explore/free-gif" target="_blank"><img src="https://github.com/yamamoto-ryuzo/QGIS_portable_3x/raw/master/imgs/giphy.gif" width="500" title="avvio QGIS"></a>
+</p>
