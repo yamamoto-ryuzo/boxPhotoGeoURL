@@ -100,6 +100,53 @@ def get_exif_location(image_bytes):
     except Exception:
         return None, None
 
+def get_exif_location_and_datetime(image_bytes):
+    # 緯度・経度・撮影日を取得
+    date_taken = None
+    try:
+        tags = exifread.process_file(BytesIO(image_bytes))
+    except Exception:
+        # .heicの場合はpillow-heifで対応
+        try:
+            from pillow_heif import register_heif_opener
+            register_heif_opener()
+            img = Image.open(BytesIO(image_bytes))
+            exif = img.getexif()
+            gps_info = exif.get_ifd(0x8825) if hasattr(exif, "get_ifd") else None
+            date_taken = exif.get(0x9003) if exif else None  # DateTimeOriginal
+            if gps_info:
+                def _convert_to_degrees_pillow(value):
+                    d, m, s = value
+                    return float(d[0]) / d[1] + float(m[0]) / m[1] / 60 + float(s[0]) / s[1] / 3600
+                lat = _convert_to_degrees_pillow(gps_info[2])
+                if gps_info[1] != 'N':
+                    lat = -lat
+                lon = _convert_to_degrees_pillow(gps_info[4])
+                if gps_info[3] != 'E':
+                    lon = -lon
+                return lat, lon, str(date_taken) if date_taken else None
+            else:
+                return None, None, None
+        except Exception:
+            return None, None, None
+    def _convert_to_degrees(value):
+        d = float(value.values[0].num) / float(value.values[0].den)
+        m = float(value.values[1].num) / float(value.values[1].den)
+        s = float(value.values[2].num) / float(value.values[2].den)
+        return d + (m / 60.0) + (s / 3600.0)
+    try:
+        lat = _convert_to_degrees(tags['GPS GPSLatitude'])
+        if tags['GPS GPSLatitudeRef'].values[0] != 'N':
+            lat = -lat
+        lon = _convert_to_degrees(tags['GPS GPSLongitude'])
+        if tags['GPS GPSLongitudeRef'].values[0] != 'E':
+            lon = -lon
+        # 撮影日を取得（DateTimeOriginalまたはDateTime）
+        date_taken = str(tags.get('EXIF DateTimeOriginal') or tags.get('Image DateTime') or "")
+        return lat, lon, date_taken if date_taken else None
+    except Exception:
+        return None, None, None
+
 def get_shared_link(client, file):
     # 共有リンクの自動作成はしていません
     try:
@@ -151,7 +198,7 @@ def main():
             image_bytes = client.file(file.id).content()
         except Exception:
             image_bytes = None
-        lat, lon = get_exif_location(image_bytes) if image_bytes else (None, None)
+        lat, lon, date_taken = get_exif_location_and_datetime(image_bytes) if image_bytes else (None, None, None)
         url = f"https://app.box.com/file/{file.id}"
         # フォルダ階層を含めたファイル名を作成
         full_name = os.path.join(folder_path, file.name)
@@ -160,11 +207,12 @@ def main():
             'full_name': full_name,
             'latitude': lat,
             'longitude': lon,
+            'date_taken': date_taken,
             'url': url
         })
     # 結果を表示
     for r in result:
-        print(f"{r['full_name']}, {r['latitude']}, {r['longitude']}, {r['url']}")
+        print(f"{r['full_name']}, {r['latitude']}, {r['longitude']}, {r['date_taken']}, {r['url']}")
 
     # GPKGデータ作成
     records = [
@@ -172,15 +220,21 @@ def main():
             "name": r["name"],
             "full_name": r["full_name"],
             "url": r["url"],
+            "date_taken": r["date_taken"],
             "geometry": Point(r["longitude"], r["latitude"])
         }
         for r in result if r["latitude"] is not None and r["longitude"] is not None
     ]
     if records:
         gdf = gpd.GeoDataFrame(records, crs="EPSG:4326")
-        print(f"GPKG出力時のEPSGコード: {gdf.crs.to_epsg()}")
+        # QGISで写真の連続再生（ポップアップやアタッチメント）を行うには
+        # 1. "url"列にWeb上で直接アクセスできる画像URLを格納する
+        # 2. QGISで「アクション」や「HTMLポップアップ」機能を使い、url列を画像表示に利用する
+        # 例: QGISの「アクション」に `[% "url" %]` を設定し、Webブラウザで画像を開く
+        # 例: QGISの「HTMLポップアップ」に <img src="[% "url" %]" width="400"> などを記述
         gdf.to_file("box_photos.gpkg", driver="GPKG")
         print("GPKGファイル(box_photos.gpkg)を作成しました。")
+        print("QGISで「url」列を使ってアクションやHTMLポップアップで写真を表示できます。")
     else:
         print("位置情報付き画像がありません。")
 
