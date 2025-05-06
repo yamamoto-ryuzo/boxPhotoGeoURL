@@ -33,7 +33,7 @@ python box_photo_geo_url.py
 
 ## EXEファイルについて
 
-本リポジトリには、`box_photo_geo_url.py` を PyInstaller でビルドした EXE ファイルも同梱されています。  
+[`box_photo_geo_url.py` を PyInstaller でビルドした EXE ファイルはこちらから。](https://1drv.ms/u/c/cbbfeab49e70546f/EeZQjitMDHNGjaakVGEF29oBSy0etNC6dOX0AadLIhgnEg?e=UiXQdY)  
 Python環境がなくても、Windows上で `box_photo_geo_url.exe` を直接実行できます。
 
 - EXEの作成コマンド例:
