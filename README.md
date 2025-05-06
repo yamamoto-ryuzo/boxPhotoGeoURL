@@ -18,7 +18,7 @@ pip install boxsdk requests Pillow exifread geopandas shapely pandas pillow-heif
 
 ## 使い方
 
-![alt text](image.png)
+![alt text](image/image.png)
 
 1. `config.json` を同じフォルダに用意し、Boxの `開発者トークン` を記載してください（初回起動時にGUIで入力も可能）。
 2. スクリプトを実行します。
