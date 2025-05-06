@@ -34,8 +34,8 @@ def get_credentials_gui(initial_access_token=None, initial_folder_url=None):
 
     class CredentialsDialog(simpledialog.Dialog):
         def body(self, master):
-            tk.Label(master, text="access_token:").grid(row=0, sticky="e")
-            tk.Label(master, text="folderのURL:").grid(row=1, sticky="e")
+            tk.Label(master, text="開発者トークン:").grid(row=0, sticky="e")
+            tk.Label(master, text="フォルダURL:").grid(row=1, sticky="e")
             self.token_entry = tk.Entry(master, width=60)
             self.token_entry.insert(0, initial_access_token or "")
             self.token_entry.grid(row=0, column=1)
@@ -233,6 +233,19 @@ def get_shared_link(client, file):
 # - 一般的なカメラやスマートフォンのExif GPS情報はWGS84（EPSG:4326）を前提としています。
 # - そのため、プログラムではEPSG:4326を指定しています。
 
+def show_results_gui(results_text):
+    import tkinter as tk
+    from tkinter.scrolledtext import ScrolledText
+
+    root = tk.Tk()
+    root.title("Box Photo GeoURL 結果")
+    text = ScrolledText(root, width=120, height=40, font=("Meiryo", 10))
+    text.pack(fill="both", expand=True)
+    text.insert("end", results_text)
+    text.config(state="disabled")
+    tk.Button(root, text="閉じる", command=root.destroy).pack(pady=5)
+    root.mainloop()
+
 def main():
     config = load_config()
     # 1画面でaccess_tokenとfolder_urlを入力
@@ -249,6 +262,7 @@ def main():
     # 再帰的に画像ファイルとパスを取得
     image_files = get_image_files_from_folder_recursive(client, folder_id)
     result = []
+    results_text = ""
     for file, folder_path in image_files:
         try:
             image_bytes = client.file(file.id).content()
@@ -266,9 +280,10 @@ def main():
             'date_taken': date_taken,
             'url': url
         })
+        results_text += f"{full_name}, {lat}, {lon}, {date_taken}, {url}\n"
+
     # 結果を表示
-    for r in result:
-        print(f"{r['full_name']}, {r['latitude']}, {r['longitude']}, {r['date_taken']}, {r['url']}")
+    print(results_text, end="")
 
     # GPKGデータ作成
     records = [
@@ -283,22 +298,24 @@ def main():
     ]
     if records:
         gdf = gpd.GeoDataFrame(records, crs="EPSG:4326")
-        # QGISで写真の連続再生（ポップアップやアタッチメント）を行うには
-        # 1. "url"列にWeb上で直接アクセスできる画像URLを格納する
-        # 2. QGISで「アクション」や「HTMLポップアップ」機能を使い、url列を画像表示に利用する
-        # 例: QGISの「アクション」に `[% "url" %]` を設定し、Webブラウザで画像を開く
-        # 例: QGISの「HTMLポップアップ」に <img src="[% "url" %]" width="400"> などを記述
         gdf.to_file("box_photos.gpkg", driver="GPKG")
+        results_text += "GPKGファイル(box_photos.gpkg)を作成しました。\n"
+        results_text += "QGISで「url」列を使ってアクションやHTMLポップアップで写真を表示できます。\n"
         print("GPKGファイル(box_photos.gpkg)を作成しました。")
         print("QGISで「url」列を使ってアクションやHTMLポップアップで写真を表示できます。")
     else:
+        results_text += "位置情報付き画像がありません。\n"
         print("位置情報付き画像がありません。")
 
     # CSVファイル作成
     if result:
         df = pd.DataFrame(result)
         df.to_csv("box_photos.csv", index=False, encoding="utf-8")
+        results_text += "CSVファイル(box_photos.csv)を作成しました。\n"
         print("CSVファイル(box_photos.csv)を作成しました。")
+
+    # GUIで結果表示
+    show_results_gui(results_text)
 
 if __name__ == '__main__': 
     main()

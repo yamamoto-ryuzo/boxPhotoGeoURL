@@ -18,14 +18,16 @@ pip install boxsdk requests Pillow exifread geopandas shapely pandas pillow-heif
 
 ## 使い方
 
-1. `config.json` を同じフォルダに用意し、Boxの `access_token` を記載してください（初回起動時にGUIで入力も可能）。
+![alt text](image.png)
+
+1. `config.json` を同じフォルダに用意し、Boxの `開発者トークン` を記載してください（初回起動時にGUIで入力も可能）。
 2. スクリプトを実行します。
 
 ```sh
 python box_photo_geo_url.py
 ```
 
-3. GUIで `access_token` と `folderのURL` を入力します（`config.json` に保存されます）。
+3. GUIで `開発者トークン` と `フォルダURL` を入力します（`config.json` に保存されます）。
 4. 指定フォルダ以下の画像ファイルを再帰的に取得し、EXIF情報から位置情報・撮影日を抽出します。
 5. 結果が `box_photos.csv`（CSV）と `box_photos.gpkg`（GPKG）として出力されます。
 
