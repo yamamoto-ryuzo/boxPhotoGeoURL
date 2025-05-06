@@ -1,60 +1,55 @@
-# Boxフォルダ写真位置情報抽出アプリ
+# Box Photo Geo URL
 
-## 概要
-このアプリは、Boxクラウドストレージ内の指定フォルダ（サブフォルダ含む）に保存された画像ファイル（JPEG, TIFF, HEICなど）を自動で取得し、各画像のExif情報から位置情報（緯度・経度）や撮影日を抽出します。  
-抽出した情報は、地理空間データ（GPKG形式）およびCSVファイルとして出力され、QGIS等のGISソフトで地図上に写真を可視化できます。
+Boxのフォルダ内の画像ファイルを取得し、EXIF情報から緯度経度・撮影日を抽出し、共有リンク付きで一覧化・GPKG/CSV出力するPythonスクリプトです。
 
-## 主な機能
-- Box APIを利用し、指定フォルダ以下の全画像ファイルを再帰的に取得
-- 画像のExif情報から緯度・経度・撮影日を自動抽出
-- 画像のBox上のURLやフォルダ階層付きファイル名も記録
-- 位置情報付き画像をGPKG（GeoPackage）およびCSVで出力
+## 特徴
+
+- Box APIで指定フォルダ（サブフォルダ含む）内の画像ファイルを再帰的に取得
+- 画像のEXIF情報から緯度・経度・撮影日を抽出（JPEG/TIFF/HEIC対応）
+- 画像ごとにBoxの共有リンク（Web URL）を付与
+- 結果をCSVおよびGPKG（QGIS対応）で出力
+- QGISで「url」列を使ってアクションやHTMLポップアップで写真表示が可能
+
+## 必要なライブラリ
+
+```sh
+pip install boxsdk requests Pillow exifread geopandas shapely pandas pillow-heif
+```
 
 ## 使い方
 
-1. 必要なPythonパッケージをインストール  
-   ```
-   pip install boxsdk requests Pillow exifread geopandas shapely pandas pillow-heif
-   ```
+1. `config.json` を同じフォルダに用意し、Boxの `access_token` を記載してください（初回起動時にGUIで入力も可能）。
+2. スクリプトを実行します。
 
-2. `config.json`を作成し、BoxのAPI認証情報と対象フォルダIDを記載  
-   ```json
-   {
-       "client_id": "YOUR_CLIENT_ID",
-       "client_secret": "YOUR_CLIENT_SECRET",
-       "access_token": "YOUR_ACCESS_TOKEN",
-       "folder_id": "YOUR_FOLDER_ID"
-   }
-   ```
+```sh
+python box_photo_geo_url.py
+```
 
-3. スクリプトを実行  
-   ```
-   python box_photo_geo_url.py
-   ```
+3. GUIで `access_token` と `folderのURL` を入力します（`config.json` に保存されます）。
+4. 指定フォルダ以下の画像ファイルを再帰的に取得し、EXIF情報から位置情報・撮影日を抽出します。
+5. 結果が `box_photos.csv`（CSV）と `box_photos.gpkg`（GPKG）として出力されます。
 
-4. 実行後、`box_photos.gpkg`（地理空間データ）と`box_photos.csv`（一覧表）が作成されます。
+## 出力ファイル
 
-## GitHub上での実行について
+- `box_photos.csv`  
+  画像ファイル名、パス、緯度、経度、撮影日、Box共有URLを含むCSV
+- `box_photos.gpkg`  
+  QGIS等で利用できるジオパッケージ（EPSG:4326、url列付き）
 
-このアプリはBox APIの認証情報（client_id, client_secret, access_tokenなど）や画像ファイルのダウンロード処理を必要とするため、  
-**GitHub ActionsやCodespacesなどのクラウド上で直接実行することは推奨されません**。  
-理由：
-- Boxのアクセストークンやクライアントシークレットなどの機密情報をGitHubリポジトリやクラウド上に置くことはセキュリティ上危険です。
-- Box APIの利用にはユーザーごとの認証が必要であり、GitHub上での自動実行はBoxの利用規約やセキュリティポリシーに抵触する場合があります。
-- 画像ファイルのダウンロードやGPKG/CSVの生成はローカル環境での実行を前提としています。
+## QGISでの利用例
 
-**必ずローカルPC上で実行してください。**
+- 「url」列をQGISの「アクション」や「HTMLポップアップ」で利用し、写真をWeb表示できます。
+  - 例: アクションに `[% "url" %]` を設定しWebブラウザで画像を開く
+  - 例: HTMLポップアップに `<img src="[% "url" %]" width="400">` など
 
 ## 注意事項
 
-- Boxのアクセストークンは有効期限が短いため、定期的な更新が必要です。
-- 画像にExif位置情報がない場合は、出力データに緯度・経度は含まれません。
-- `.heic`画像のExif取得には`pillow-heif`が必要です。
+- 画像のEXIF情報は画像ファイル自体に埋め込まれているため、**画像をダウンロードせずにEXIF情報を取得することはできません**。
+- Box APIは画像のメタデータとしてEXIF情報を直接返すエンドポイントを提供していません。
+- EXIFのGPS情報はWGS84（EPSG:4326）を前提としています。
+- `access_token` の有効期限切れ時は再取得が必要です。
 
-## ライセンス
-MIT License
+## 参考
 
-## 免責事項
-私のパソコンで作成され、テストされたものです。どんな災難にも責任は負いません！  
-<p align="center"> <a href="https://giphy.com/explore/free-gif" target="_blank"><img src="https://github.com/yamamoto-ryuzo/QGIS_portable_3x/raw/master/imgs/giphy.gif" width="500" title="avvio QGIS"></a>
-</p>
+- [Box API ドキュメント](https://developer.box.com/guides/authentication/oauth2/)
+- [QGIS アクション/HTMLポップアップ](https://docs.qgis.org/ja/docs/user_manual/working_with_vector/actions.html)

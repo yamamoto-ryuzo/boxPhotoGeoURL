@@ -13,20 +13,67 @@ from io import BytesIO
 import geopandas as gpd
 from shapely.geometry import Point
 import pandas as pd
+import tkinter as tk
+from tkinter import simpledialog
 
 # config.jsonから認証情報を読み込む
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    # ファイル内容をそのままjson.loadsせず、json.loadでパース（改行や制御文字の除去は不要）
     with open(config_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def get_box_client():
-    config = load_config()
+def save_config(config):
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+def get_credentials_gui(initial_access_token=None, initial_folder_url=None):
+    # 1画面でaccess_tokenとfolder_urlを入力
+    import tkinter as tk
+    from tkinter import simpledialog
+
+    class CredentialsDialog(simpledialog.Dialog):
+        def body(self, master):
+            tk.Label(master, text="access_token:").grid(row=0, sticky="e")
+            tk.Label(master, text="folderのURL:").grid(row=1, sticky="e")
+            self.token_entry = tk.Entry(master, width=60)
+            self.token_entry.insert(0, initial_access_token or "")
+            self.token_entry.grid(row=0, column=1)
+            self.folder_entry = tk.Entry(master, width=60)
+            self.folder_entry.insert(0, initial_folder_url or "")
+            self.folder_entry.grid(row=1, column=1)
+            return self.token_entry
+
+        def apply(self):
+            self.result = (
+                self.token_entry.get(),
+                self.folder_entry.get()
+            )
+
+    root = tk.Tk()
+    root.withdraw()
+    dialog = CredentialsDialog(root, title="Box 認証情報入力")
+    root.destroy()
+    if dialog.result:
+        return dialog.result
+    else:
+        return None, None
+
+def extract_folder_id_from_url(folder_url):
+    """
+    URLからfolder_id部分のみ抽出（例: https://app.box.com/folder/319478787863 → 319478787863）
+    """
+    import re
+    if not folder_url:
+        return ""
+    m = re.search(r'/folder/(\d+)', folder_url)
+    return m.group(1) if m else folder_url
+
+def get_box_client(access_token):
     oauth2 = OAuth2(
-        client_id=config['client_id'],
-        client_secret=config['client_secret'],
-        access_token=config['access_token'],
+        client_id=None,
+        client_secret=None,
+        access_token=access_token,
     )
     client = Client(oauth2)
     return client
@@ -188,8 +235,17 @@ def get_shared_link(client, file):
 
 def main():
     config = load_config()
-    folder_id = config["folder_id"]  # config.jsonから取得
-    client = get_box_client()
+    # 1画面でaccess_tokenとfolder_urlを入力
+    access_token, folder_url = get_credentials_gui(
+        initial_access_token=config.get("access_token", ""),
+        initial_folder_url=config.get("folder_id", "")
+    )
+    folder_id = extract_folder_id_from_url(folder_url)
+    # 入力値をconfig.jsonに保存（folder_idはURL形式で保存）
+    config["folder_id"] = folder_url
+    config["access_token"] = access_token
+    save_config(config)
+    client = get_box_client(access_token)
     # 再帰的に画像ファイルとパスを取得
     image_files = get_image_files_from_folder_recursive(client, folder_id)
     result = []
