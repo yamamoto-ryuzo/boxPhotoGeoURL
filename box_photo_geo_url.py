@@ -1,3 +1,8 @@
+# このスクリプトをEXE形式に変換するには、以下のコマンドを使用してください:
+# pyinstaller --onefile --noconsole box_photo_geo_url.py --hidden-import=boxsdk.object.recent_item
+# 必要に応じて --add-data オプションでconfig.json等を同梱してください。
+# boxsdkのrecent_itemエラー対策として --hidden-import=boxsdk.object.recent_item を追加しています。
+
 # pip install boxsdk requests Pillow exifread geopandas shapely pandas pillow-heif
 # Boxのフォルダ内の画像ファイルを取得し、EXIF情報から緯度経度を取得して共有リンクを表示するスクリプト
 # 画像のExif情報（位置情報）は画像ファイル自体に埋め込まれているため、**画像をダウンロードせずにExif情報を取得することはできません**。  
@@ -15,15 +20,21 @@ from shapely.geometry import Point
 import pandas as pd
 import tkinter as tk
 from tkinter import simpledialog
+import sys  # 追加
 
 # config.jsonから認証情報を読み込む
 def load_config():
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    config_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'config.json')  # 修正
+    if not os.path.exists(config_path):
+        # ファイルがなければ空のファイルを作成
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write('{}')
+        return {}
     with open(config_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 def save_config(config):
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    config_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'config.json')  # 修正
     with open(config_path, 'w', encoding='utf-8') as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 

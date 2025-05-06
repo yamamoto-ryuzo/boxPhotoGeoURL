@@ -31,6 +31,17 @@ python box_photo_geo_url.py
 4. 指定フォルダ以下の画像ファイルを再帰的に取得し、EXIF情報から位置情報・撮影日を抽出します。
 5. 結果が `box_photos.csv`（CSV）と `box_photos.gpkg`（GPKG）として出力されます。
 
+## EXEファイルについて
+
+本リポジトリには、`box_photo_geo_url.py` を PyInstaller でビルドした EXE ファイルも同梱されています。  
+Python環境がなくても、Windows上で `box_photo_geo_url.exe` を直接実行できます。
+
+- EXEの作成コマンド例:
+  ```
+  pyinstaller --onefile --noconsole box_photo_geo_url.py --hidden-import=boxsdk.object.recent_item
+  ```
+- 必要に応じて `config.json` などの設定ファイルも同じフォルダに配置してください。
+
 ## 出力ファイル
 
 - `box_photos.csv`  

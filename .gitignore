@@ -2,3 +2,5 @@
 config.json
 *.csv
 *.gpkg
+build
+dist
